@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MART – Maintenance and Apartment Resource Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+    --cyan-primary: #ffb020;
+    --cyan-dark: #e08a00;
+    --cyan-glow: rgba(255, 176, 32, 0.3);
+    --brand-1: #ffd166;
+    --brand-2: #ff6b6b;
+    --brand-3: #c77dff;
+    --dark-bg: #0a1020;
+    --darker-bg: #060b18;
+    --card-bg: #101a30;
+    --border-color: #1f2d4d;
+    --text-primary: #eaf0fb;
+    --text-secondary: #8fa0bf;
+    --green-status: #00ff88;
+    --orange-status: #ff9500;
+    --red-status: #ff3b30;
+    --yellow-status: #ffd700;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'JetBrains Mono', monospace; background: var(--darker-bg); color: var(--text-primary); overflow-x: hidden; }
+
+.background-gradient {
+    position: fixed; inset: 0; z-index: -1;
+    background: radial-gradient(circle at 15% 20%, rgba(56,110,255,.20) 0%, transparent 55%),
+                radial-gradient(circle at 85% 85%, rgba(0,200,190,.12) 0%, transparent 55%);
+    animation: pulseGradient 8s ease-in-out infinite;
+}
+@keyframes pulseGradient { 0%,100% { opacity: 1; } 50% { opacity: .7; } }
+
+/* ===== Project name: animated gradient wordmark ===== */
+.main-title .highlight, .logo-text h1, .brand-mark {
+    background: linear-gradient(110deg, var(--brand-1), var(--brand-2) 40%, var(--brand-3) 65%, var(--brand-1));
+    background-size: 220% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    animation: brandFlow 7s linear infinite;
+}
+@keyframes brandFlow { to { background-position: 220% center; } }
+.brand-mark {
+    font-size: clamp(1.1rem, 3vw, 1.6rem); font-weight: 800; letter-spacing: .6em;
+    margin: 0 -.6em 1rem 0; text-align: center;
+}
+.brand-mark::after {
+    content: ''; display: block; width: 64px; height: 2px; margin: .8rem auto 0;
+    background: linear-gradient(90deg, var(--brand-1), var(--brand-3)); border-radius: 2px;
+    box-shadow: 0 0 14px var(--brand-2);
+}
+
+/* Landing */
+.landing-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
+.iot-badge {
+    display: inline-flex; align-items: center; gap: .5rem; padding: .5rem 1rem;
+    background: rgba(255,176,32,.1); border: 1px solid var(--cyan-primary); border-radius: 50px;
+    font-size: .75rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 1.5rem;
+    animation: fadeSlideDown .8s ease-out;
+}
+.main-title { font-size: clamp(2.5rem, 8vw, 5rem); font-weight: 800; text-align: center; margin-bottom: 1rem; animation: fadeSlideUp .8s ease-out .2s both; }
+.main-title .highlight { display: inline-block; letter-spacing: -1px; filter: drop-shadow(0 0 22px rgba(255,107,107,.45)); }
+.subtitle { font-size: clamp(.9rem, 2vw, 1.1rem); color: var(--text-secondary); text-align: center; max-width: 700px; margin-bottom: 3rem; line-height: 1.6; animation: fadeSlideUp .8s ease-out .4s both; }
+
+.building-overview {
+    background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; padding: 2.5rem;
+    margin-bottom: 3rem; box-shadow: 0 20px 60px rgba(0,0,0,.5); animation: fadeSlideUp .8s ease-out .6s both;
+    position: relative; overflow: hidden; width: 100%; max-width: 1000px;
+}
+.building-overview::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--brand-2), transparent); animation: shimmer 3s linear infinite;
+}
+@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.overview-header { display: flex; align-items: center; gap: .75rem; margin-bottom: 2rem; font-size: 1rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--cyan-primary); }
+.door-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 1.5rem; }
+.door-item {
+    display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 1.5rem;
+    background: rgba(255,255,255,.02); border: 1px solid var(--border-color); border-radius: 12px; transition: all .3s ease; cursor: pointer;
+}
+.door-item:hover { transform: translateY(-5px); border-color: var(--cyan-primary); box-shadow: 0 10px 30px var(--cyan-glow); }
+.door-icon {
+    width: 60px; height: 60px; background: linear-gradient(135deg, var(--cyan-dark), var(--cyan-primary)); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 800; color: var(--dark-bg); position: relative;
+}
+.status-indicator { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; background: var(--green-status); border: 2px solid var(--card-bg); border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+.door-item.warn .status-indicator { background: var(--orange-status); }
+.door-item.warn .door-status { color: var(--orange-status); }
+@keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: .7; } }
+.door-label { font-size: .75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+.door-status { font-size: .7rem; color: var(--green-status); text-transform: uppercase; font-weight: 600; }
+
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; width: 100%; max-width: 1000px; }
+.feature-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; text-align: center; transition: all .3s ease; }
+.feature-card:hover { transform: translateY(-5px); border-color: var(--brand-2); box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+.feature-icon { font-size: 3rem; margin-bottom: 1rem; }
+.feature-title { font-size: 1.2rem; font-weight: 700; margin-bottom: .5rem; }
+.feature-desc { font-size: .85rem; color: var(--text-secondary); line-height: 1.5; }
+
+.enter-btn {
+    padding: 1rem 3rem; background: linear-gradient(110deg, var(--brand-1), var(--brand-2)); color: var(--dark-bg); border: none; border-radius: 50px;
+    font-size: 1rem; font-weight: 700; font-family: inherit; text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+    transition: all .3s ease; box-shadow: 0 10px 30px rgba(255,107,107,.4); animation: fadeSlideUp .8s ease-out .8s both;
+}
+.enter-btn:hover { transform: translateY(-2px); box-shadow: 0 15px 40px rgba(255,107,107,.55); }
+@keyframes fadeSlideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeSlideDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Login */
+.login-page { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: 2rem; }
+.login-card { background: var(--card-bg); border: 2px solid var(--brand-2); border-radius: 24px; padding: 3rem; max-width: 500px; width: 100%; box-shadow: 0 0 60px rgba(255,107,107,.3); animation: fadeSlideUp .6s ease-out; }
+.login-icon { width: 80px; height: 80px; margin: 0 auto 1.5rem; background: linear-gradient(135deg, var(--brand-1), var(--brand-2) 60%, var(--brand-3)); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; }
+.login-title { font-size: 2rem; font-weight: 800; text-align: center; margin-bottom: .5rem; }
+.login-subtitle { font-size: .9rem; color: var(--text-secondary); text-align: center; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 2px; }
+.form-label { display: block; font-size: .75rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-secondary); margin-bottom: 1rem; }
+.door-selector { display: grid; grid-template-columns: repeat(7, 1fr); gap: .75rem; margin-bottom: 2rem; }
+.door-btn { aspect-ratio: 1; background: var(--darker-bg); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-size: 1.2rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: all .3s ease; }
+.door-btn:hover { border-color: var(--cyan-primary); }
+.door-btn.selected { background: var(--cyan-primary); color: var(--dark-bg); border-color: var(--cyan-primary); box-shadow: 0 5px 20px var(--cyan-glow); }
+.input-wrapper { position: relative; }
+.password-input { width: 100%; padding: 1rem 1rem 1rem 3rem; background: var(--darker-bg); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-size: 1rem; font-family: inherit; margin-bottom: 2rem; transition: all .3s ease; }
+.password-input:focus { outline: none; border-color: var(--cyan-primary); box-shadow: 0 0 20px var(--cyan-glow); }
+.input-icon { position: absolute; left: 1rem; top: 1.1rem; color: var(--text-secondary); }
+.access-btn { width: 100%; padding: 1.2rem; background: var(--cyan-primary); color: var(--dark-bg); border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; font-family: inherit; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all .3s ease; margin-bottom: 1.5rem; }
+.access-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px var(--cyan-glow); }
+.back-link { text-align: center; color: var(--text-secondary); font-size: .85rem; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+.back-link:hover { color: var(--cyan-primary); }
+.demo-hint { text-align: center; color: var(--text-secondary); font-size: .75rem; margin-top: 1.5rem; font-style: italic; }
+
+/* Dashboard */
+.dashboard { display: none; }
+.dashboard.active { display: flex; }
+.sidebar { width: 260px; background: var(--card-bg); border-right: 1px solid var(--border-color); height: 100vh; position: fixed; left: 0; top: 0; padding: 2rem 0; overflow-y: auto; z-index: 20; }
+.logo { padding: 0 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap: .75rem; }
+.logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, var(--brand-1), var(--brand-2) 60%, var(--brand-3)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 800; color: var(--dark-bg); box-shadow: 0 0 20px rgba(255,107,107,.45); }
+.logo-text h1 { font-size: 1.35rem; font-weight: 800; letter-spacing: 3px; }
+.logo-text p { font-size: .65rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+.door-info { padding: 1.5rem; margin: 0 1rem 2rem; background: rgba(255,107,107,.07); border: 1px solid var(--brand-2); border-radius: 12px; }
+.door-info-label { font-size: .7rem; color: var(--cyan-primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: .5rem; }
+.door-info-name { font-size: 1.1rem; font-weight: 700; margin-bottom: .5rem; }
+.door-info-status { display: flex; align-items: center; gap: .5rem; font-size: .75rem; color: var(--green-status); }
+.door-info-status.warn { color: var(--orange-status); }
+.status-dot { width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+.nav-menu { list-style: none; }
+.nav-item { margin-bottom: .25rem; animation: slideIn .3s ease-out forwards; }
+.nav-link { display: flex; align-items: center; gap: .75rem; padding: .9rem 1.5rem; color: var(--text-secondary); text-decoration: none; transition: all .3s ease; font-size: .9rem; border-left: 3px solid transparent; }
+.nav-link:hover { background: rgba(255,176,32,.05); color: var(--text-primary); border-left-color: var(--cyan-primary); }
+.nav-link.active { background: rgba(255,176,32,.1); color: var(--cyan-primary); border-left-color: var(--cyan-primary); }
+.badge { margin-left: auto; min-width: 20px; padding: 1px 7px; background: var(--red-status); color: #fff; border-radius: 10px; font-size: .7rem; text-align: center; display: none; }
+.badge.show { display: inline-block; }
+.logout-btn { position: absolute; bottom: 2rem; left: 1.5rem; right: 1.5rem; padding: .9rem; background: rgba(255,59,48,.1); border: 1px solid var(--red-status); border-radius: 8px; color: var(--red-status); cursor: pointer; transition: all .3s ease; display: flex; align-items: center; justify-content: center; gap: .5rem; }
+.logout-btn:hover { background: var(--red-status); color: var(--dark-bg); }
+.main-content { margin-left: 260px; padding: 2rem 3rem; min-height: 100vh; width: calc(100% - 260px); }
+.page-header { margin-bottom: 2rem; }
+.page-title { display: flex; align-items: center; gap: .75rem; font-size: 2rem; font-weight: 800; margin-bottom: .5rem; }
+.page-subtitle { color: var(--text-secondary); font-size: .9rem; }
+.content-section { display: none; }
+.content-section.active { display: block; animation: fadeIn .4s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 1.5rem; transition: all .3s ease; }
+.stat-card:hover { transform: translateY(-5px); border-color: var(--cyan-primary); }
+.stat-label { font-size: .75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: .75rem; }
+.stat-value { font-size: 2.5rem; font-weight: 800; }
+.green { color: var(--green-status); } .cyan { color: var(--cyan-primary); } .orange { color: var(--orange-status); } .red { color: var(--red-status); }
+
+.dashboard-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.card-title { font-size: 1rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--cyan-primary); }
+.empty-state { text-align: center; padding: 3rem; color: var(--text-secondary); }
+.empty-icon { font-size: 4rem; margin-bottom: 1rem; opacity: .3; }
+
+/* Issue list / approvals */
+.issue-list { display: grid; gap: 1rem; }
+.issue-item { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; background: var(--darker-bg); border: 1px solid var(--border-color); border-left: 4px solid var(--cyan-primary); border-radius: 12px; padding: 1.2rem 1.5rem; animation: fadeIn .4s ease-out; }
+.issue-item.mailbox { border-left-color: var(--orange-status); }
+.issue-icon { font-size: 1.8rem; }
+.issue-body { flex: 1; min-width: 200px; }
+.issue-title { font-weight: 700; margin-bottom: .25rem; }
+.issue-meta { font-size: .75rem; color: var(--text-secondary); line-height: 1.5; }
+.issue-actions { display: flex; gap: .5rem; }
+.btn { padding: .6rem 1.1rem; border-radius: 8px; border: 1px solid; font-family: inherit; font-weight: 700; font-size: .8rem; cursor: pointer; transition: all .2s ease; text-transform: uppercase; letter-spacing: 1px; }
+.btn.accept { background: rgba(0,255,136,.1); color: var(--green-status); border-color: var(--green-status); }
+.btn.accept:hover { background: var(--green-status); color: var(--dark-bg); }
+.btn.reject { background: rgba(255,59,48,.1); color: var(--red-status); border-color: var(--red-status); }
+.btn.reject:hover { background: var(--red-status); color: var(--dark-bg); }
+.pill { font-size: .65rem; padding: 2px 8px; border-radius: 20px; border: 1px solid; text-transform: uppercase; letter-spacing: 1px; margin-left: .5rem; }
+.pill.pending { color: var(--orange-status); } .pill.progress { color: var(--cyan-primary); } .pill.resolved { color: var(--green-status); } .pill.rejected { color: var(--red-status); }
+
+/* Tracking timeline */
+.timeline { display: flex; align-items: flex-start; margin-top: 1.2rem; width: 100%; }
+.tl-step { flex: 1; text-align: center; position: relative; font-size: .7rem; color: var(--text-secondary); }
+.tl-step::before { content: ''; position: absolute; top: 9px; left: -50%; width: 100%; height: 3px; background: var(--border-color); z-index: 0; }
+.tl-step:first-child::before { display: none; }
+.tl-step.done::before { background: var(--green-status); }
+.tl-dot { width: 20px; height: 20px; margin: 0 auto .5rem; border-radius: 50%; background: var(--border-color); position: relative; z-index: 1; transition: all .4s ease; }
+.tl-step.done .tl-dot { background: var(--green-status); box-shadow: 0 0 12px rgba(0,255,136,.5); }
+.tl-step.current .tl-dot { background: var(--cyan-primary); animation: pulse 1.2s ease-in-out infinite; }
+.tl-step.done, .tl-step.current { color: var(--text-primary); }
+
+/* Alerts */
+.alert-item { display: flex; gap: 1rem; padding: 1rem 1.2rem; background: var(--darker-bg); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: .75rem; animation: fadeIn .4s ease-out; }
+.alert-item.unread { border-color: var(--brand-2); background: rgba(255,107,107,.06); }
+.alert-time { font-size: .7rem; color: var(--text-secondary); margin-top: .2rem; }
+
+/* Demo */
+.demo-targets { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.target-door { padding: 1rem; background: var(--darker-bg); border: 2px solid var(--border-color); border-radius: 12px; color: var(--text-primary); text-align: center; font-size: 1.2rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: all .3s ease; }
+.target-door:hover { border-color: var(--cyan-primary); }
+.target-door.selected { background: var(--cyan-primary); color: var(--dark-bg); border-color: var(--cyan-primary); box-shadow: 0 5px 20px var(--cyan-glow); }
+.trigger-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+.trigger-card { background: linear-gradient(135deg, rgba(224,138,0,.1), rgba(255,176,32,.05)); border: 1px solid var(--cyan-primary); border-radius: 16px; padding: 2rem; cursor: pointer; transition: all .3s ease; position: relative; overflow: hidden; }
+.trigger-card::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent); transition: left .5s ease; }
+.trigger-card:hover::before { left: 100%; }
+.trigger-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px var(--cyan-glow); }
+.trigger-card.mailbox { background: linear-gradient(135deg, rgba(255,149,0,.1), rgba(255,204,0,.05)); border-color: var(--orange-status); }
+.trigger-header { display: flex; align-items: center; gap: 1rem; }
+.trigger-icon { width: 50px; height: 50px; background: var(--cyan-primary); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.trigger-card.mailbox .trigger-icon { background: var(--orange-status); }
+.trigger-title { font-size: 1.2rem; font-weight: 700; }
+.trigger-desc { color: var(--text-secondary); font-size: .85rem; }
+.play-icon { margin-left: auto; color: var(--cyan-primary); font-size: 1.5rem; }
+.demo-workflow { background: rgba(255,176,32,.05); border: 1px solid var(--cyan-primary); border-radius: 12px; padding: 2rem; }
+.workflow-title { font-size: .9rem; text-transform: uppercase; letter-spacing: 1.5px; color: var(--cyan-primary); margin-bottom: 1.5rem; }
+.workflow-steps { list-style: none; }
+.workflow-steps li { color: var(--text-secondary); font-size: .9rem; line-height: 1.8; padding-left: 1.5rem; position: relative; }
+.workflow-steps li::before { content: ''; position: absolute; left: 0; top: .6rem; width: 6px; height: 6px; background: var(--cyan-primary); border-radius: 50%; }
+.workflow-steps strong { color: var(--text-primary); }
+.reset-btn { margin-top: 1.5rem; }
+
+/* Sensors */
+.sensor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+.sensor-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; padding: 2rem; text-align: center; transition: all .3s ease; }
+.sensor-card:hover { transform: translateY(-5px); border-color: var(--cyan-primary); }
+.sensor-card.alert { border-color: var(--red-status); box-shadow: 0 0 25px rgba(255,59,48,.25); }
+.sensor-card.alert .sensor-status { color: var(--red-status); }
+.sensor-icon-large { font-size: 3rem; margin-bottom: 1rem; }
+.sensor-name { font-size: 1rem; font-weight: 700; margin-bottom: .5rem; }
+.sensor-status { font-size: .75rem; color: var(--green-status); text-transform: uppercase; font-weight: 600; }
+
+/* Mailbox */
+.issue-categories { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 2rem; }
+.category-btn { padding: 1.5rem; background: var(--darker-bg); border: 1px solid var(--border-color); border-radius: 12px; cursor: pointer; transition: all .3s ease; text-align: left; }
+.category-btn:hover { border-color: var(--cyan-primary); transform: translateY(-2px); }
+.category-btn.selected { background: rgba(255,176,32,.1); border-color: var(--cyan-primary); }
+.category-icon { font-size: 1.5rem; margin-bottom: .5rem; }
+.category-name { font-size: .9rem; font-weight: 600; }
+.description-textarea { width: 100%; min-height: 150px; padding: 1rem; background: var(--darker-bg); border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); font-size: .9rem; font-family: inherit; resize: vertical; margin-bottom: 2rem; }
+.description-textarea:focus { outline: none; border-color: var(--cyan-primary); }
+.submit-btn { width: 100%; padding: 1.2rem; background: var(--cyan-primary); color: var(--dark-bg); border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; font-family: inherit; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: all .3s ease; display: flex; align-items: center; justify-content: center; gap: .5rem; }
+.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px var(--cyan-glow); }
+
+/* Analytics */
+.bar-chart { display: flex; align-items: flex-end; gap: 1rem; height: 260px; padding: 1rem; background: var(--darker-bg); border: 1px dashed var(--border-color); border-radius: 12px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: .4rem; font-size: .75rem; }
+.bar { width: 100%; max-width: 56px; min-height: 2px; background: linear-gradient(180deg, var(--brand-2), var(--brand-1)); border-radius: 8px 8px 0 0; transition: height .6s ease; }
+.donut-wrap { display: flex; align-items: center; justify-content: center; gap: 2.5rem; flex-wrap: wrap; }
+.donut { width: 170px; height: 170px; border-radius: 50%; background: var(--border-color); position: relative; transition: background .5s ease; }
+.donut::after { content: ''; position: absolute; inset: 32px; background: var(--card-bg); border-radius: 50%; }
+.legend { display: grid; gap: .8rem; }
+.legend-item { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+.legend-dot.cyan { background: var(--cyan-primary); } .legend-dot.orange { background: var(--orange-status); } .legend-dot.green { background: var(--green-status); } .legend-dot.red { background: var(--red-status); }
+
+/* Toast */
+.toast-wrap { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100; display: grid; gap: .6rem; }
+.toast { background: var(--card-bg); border: 1px solid var(--brand-2); border-radius: 12px; padding: .9rem 1.2rem; font-size: .85rem; box-shadow: 0 10px 30px rgba(0,0,0,.5); animation: fadeSlideDown .3s ease-out; max-width: 320px; }
+
+.menu-toggle { display: none; position: fixed; top: 1rem; left: 1rem; z-index: 30; background: var(--card-bg); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: .5rem .8rem; font-size: 1.2rem; cursor: pointer; }
+
+@media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); transition: transform .3s ease; }
+    .sidebar.mobile-open { transform: translateX(0); }
+    .main-content { margin-left: 0; width: 100%; padding: 4rem 1.5rem 1.5rem; }
+    .dashboard.active .menu-toggle { display: block; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .door-selector { grid-template-columns: repeat(4, 1fr); }
+    .demo-targets { grid-template-columns: repeat(4, 1fr); }
+    .issue-categories { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="background-gradient"></div>
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- Landing Page -->
+<div class="landing-page" id="landingPage">
+    <div class="iot-badge">📡 IOT ENABLED MONITORING</div>
+    <div class="brand-mark">MART </div>
+    <h1 class="main-title"> Maintenance and <br><span class="highlight">Apartment Resource Tracker</span></h1>
+    <p class="subtitle">AI-powered sensor detection &amp; digital mailbox for seamless property maintenance management</p>
+
+    <div class="building-overview">
+        <div class="overview-header">🏢 BUILDING OVERVIEW</div>
+        <div class="door-grid" id="doorGrid"></div>
+    </div>
+
+    <div class="feature-grid">
+        <div class="feature-card"><div class="feature-icon">🤖</div><div class="feature-title">Sensor Detection</div><div class="feature-desc">Automatic issue detection via IoT sensors</div></div>
+        <div class="feature-card"><div class="feature-icon">📬</div><div class="feature-title">Digital Mailbox</div><div class="feature-desc">Manual complaint submission system</div></div>
+        <div class="feature-card"><div class="feature-icon">📊</div><div class="feature-title">Smart Analytics</div><div class="feature-desc">Real-time maintenance performance tracking</div></div>
+    </div>
+
+    <button class="enter-btn" onclick="showLogin()">ENTER SYSTEM →</button>
+</div>
+
+<!-- Login Page -->
+<div class="login-page" id="loginPage">
+    <div class="login-card">
+        <div class="login-icon">🏢</div>
+        <h2 class="login-title">OWNER LOGIN</h2>
+        <p class="login-subtitle">SECURE ACCESS PORTAL</p>
+
+        <div class="form-label">SELECT DOOR</div>
+        <div class="door-selector" id="loginDoors"></div>
+
+        <div class="form-label">PASSWORD</div>
+        <div class="input-wrapper">
+            <span class="input-icon">🔒</span>
+            <input type="password" class="password-input" placeholder="Enter password" id="passwordInput">
+        </div>
+
+        <button class="access-btn" onclick="login()">ACCESS DASHBOARD</button>
+        <div class="back-link" onclick="showLanding()">← BACK TO BUILDING</div>
+        <div class="demo-hint">Demo: password = door[number] (e.g., door1)</div>
+    </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard" id="dashboard">
+    <button class="menu-toggle" onclick="document.querySelector('.sidebar').classList.toggle('mobile-open')">☰</button>
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon">N</div>
+            <div class="logo-text"><h1>NESTIQ</h1><p>DASHBOARD</p></div>
+        </div>
+
+        <div class="door-info">
+            <div class="door-info-label">DOOR <span id="currentDoor">1</span></div>
+            <div class="door-info-name" id="ownerName">Arjun Mehta</div>
+            <div class="door-info-status" id="sideStatus"><span class="status-dot"></span><span id="sideStatusText">HEALTHY</span></div>
+        </div>
+
+        <nav>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="#" class="nav-link active" data-section="overview"><span>🏠</span> Overview</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" data-section="sensors"><span>📡</span> Sensors</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" data-section="mailbox"><span>📧</span> Mailbox</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" data-section="approvals"><span>✅</span> Approvals <span class="badge" id="approvalBadge">0</span></a></li>
+                <li class="nav-item"><a href="#" class="nav-link" data-section="tracking"><span>📈</span> Tracking</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" data-section="alerts"><span>🔔</span> Alerts <span class="badge" id="alertBadge">0</span></a></li>
+                <li class="nav-item"><a href="#" class="nav-link" data-section="analytics"><span>📊</span> Analytics</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" data-section="demo"><span>⚙️</span> Demo</a></li>
+            </ul>
+        </nav>
+
+        <div class="logout-btn" onclick="logout()"><span>🚪</span> Logout</div>
+    </aside>
+
+    <main class="main-content">
+        <!-- Overview -->
+        <section class="content-section active" id="overview">
+            <div class="page-header">
+                <h2 class="page-title">🏠 HOUSE OVERVIEW</h2>
+                <p class="page-subtitle">Door <span id="overviewDoor">1</span> • Status: <span id="overviewStatus">HEALTHY</span></p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-label">Total Issues</div><div class="stat-value cyan" id="ovTotal">0</div></div>
+                <div class="stat-card"><div class="stat-label">Active</div><div class="stat-value orange" id="ovActive">0</div></div>
+                <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value red" id="ovPending">0</div></div>
+                <div class="stat-card"><div class="stat-label">Resolved</div><div class="stat-value green" id="ovResolved">0</div></div>
+            </div>
+            <div id="overviewList"></div>
+        </section>
+
+        <!-- Sensors -->
+        <section class="content-section" id="sensors">
+            <div class="page-header">
+                <h2 class="page-title">📡 SENSOR DETECTION</h2>
+                <p class="page-subtitle">Automatic issue monitoring for Door <span id="sensorDoor">1</span></p>
+            </div>
+            <div class="sensor-grid" id="sensorGrid"></div>
+            <div id="sensorMsg"></div>
+        </section>
+
+        <!-- Mailbox -->
+        <section class="content-section" id="mailbox">
+            <div class="page-header">
+                <h2 class="page-title">📧 DIGITAL MAILBOX</h2>
+                <p class="page-subtitle">Submit maintenance complaint for Door <span id="mailboxDoor">1</span></p>
+            </div>
+            <div class="dashboard-card">
+                <div class="form-label">ISSUE CATEGORY</div>
+                <div class="issue-categories" id="categoryGrid"></div>
+                <div class="form-label">DESCRIPTION</div>
+                <textarea class="description-textarea" placeholder="Describe the issue in detail..." id="issueDescription"></textarea>
+                <button class="submit-btn" onclick="submitComplaint()"><span>📤</span> SUBMIT COMPLAINT</button>
+            </div>
+        </section>
+
+        <!-- Approvals -->
+        <section class="content-section" id="approvals">
+            <div class="page-header">
+                <h2 class="page-title">✅ APPROVAL CENTER</h2>
+                <p class="page-subtitle">Approve or reject maintenance requests</p>
+            </div>
+            <div id="approvalList"></div>
+        </section>
+
+        <!-- Tracking -->
+        <section class="content-section" id="tracking">
+            <div class="page-header">
+                <h2 class="page-title">📈 MAINTENANCE TRACKING</h2>
+                <p class="page-subtitle">Real-time service progress for Door <span id="trackingDoor">1</span></p>
+            </div>
+            <div id="trackingList"></div>
+        </section>
+
+        <!-- Alerts -->
+        <section class="content-section" id="alerts">
+            <div class="page-header">
+                <h2 class="page-title">🔔 NOTIFICATION CENTER</h2>
+                <p class="page-subtitle"><span id="unreadCount">0</span> unread alerts</p>
+            </div>
+            <div id="alertList"></div>
+        </section>
+
+        <!-- Analytics -->
+        <section class="content-section" id="analytics">
+            <div class="page-header">
+                <h2 class="page-title">📊 ANALYTICS</h2>
+                <p class="page-subtitle">Maintenance performance overview (all doors)</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-label">Resolved</div><div class="stat-value green" id="anResolved">0</div></div>
+                <div class="stat-card"><div class="stat-label">In Progress</div><div class="stat-value cyan" id="anProgress">0</div></div>
+                <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value orange" id="anPending">0</div></div>
+            </div>
+            <div class="dashboard-card">
+                <div class="card-header"><div class="card-title">COMPLAINTS PER HOUSE</div></div>
+                <div class="bar-chart" id="barChart"></div>
+            </div>
+            <div class="dashboard-card">
+                <div class="card-header"><div class="card-title">ISSUE TYPES</div></div>
+                <div class="donut-wrap">
+                    <div class="donut" id="donut"></div>
+                    <div class="legend" id="legend"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Demo -->
+        <section class="content-section" id="demo">
+            <div class="page-header">
+                <h2 class="page-title">⚙️ DEMO SIMULATION</h2>
+                <p class="page-subtitle">Test system workflows with simulated events</p>
+            </div>
+            <div class="dashboard-card">
+                <div class="card-header"><div class="card-title">TARGET DOOR</div></div>
+                <div class="demo-targets" id="demoTargets"></div>
+                <div class="trigger-cards">
+                    <div class="trigger-card" data-source="sensor">
+                        <div class="trigger-header">
+                            <div class="trigger-icon">⚡</div>
+                            <div><div class="trigger-title">SENSOR TRIGGER</div><div class="trigger-desc">Simulate auto-detection</div></div>
+                            <div class="play-icon">▶</div>
+                        </div>
+                    </div>
+                    <div class="trigger-card mailbox" data-source="mailbox">
+                        <div class="trigger-header">
+                            <div class="trigger-icon">📧</div>
+                            <div><div class="trigger-title">MAILBOX TRIGGER</div><div class="trigger-desc">Simulate complaint</div></div>
+                            <div class="play-icon">▶</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn reject reset-btn" onclick="resetDemo()">Reset demo data</button>
+            </div>
+            <div class="demo-workflow">
+                <div class="workflow-title">DEMO WORKFLOW</div>
+                <ol class="workflow-steps">
+                    <li>Select a door and trigger a sensor/mailbox event above</li>
+                    <li>Log in as that door, then go to <strong>Approvals</strong> to Accept or Reject</li>
+                    <li>If accepted, watch the <strong>Tracking</strong> timeline animate</li>
+                    <li>Check <strong>Alerts</strong> for real-time notifications</li>
+                    <li>View <strong>Analytics</strong> for aggregated data</li>
+                </ol>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+const OWNERS = { 1:'Arjun Mehta', 2:'Priya Sharma', 3:'Raj Patel', 4:'Neha Kumar', 5:'Amit Singh', 6:'Sneha Reddy', 7:'Vikram Desai' };
+const TYPES = {
+    'water-leak': { name:'Water Leak', icon:'💧', color:'var(--cyan-primary)', dot:'cyan' },
+    'electrical': { name:'Electrical Fault', icon:'⚡', color:'var(--orange-status)', dot:'orange' },
+    'structural': { name:'Structural Damage', icon:'🏗️', color:'var(--green-status)', dot:'green' },
+    'garbage':    { name:'Garbage Overflow', icon:'🗑️', color:'var(--red-status)', dot:'red' }
+};
+const STEPS = ['Approved', 'Technician assigned', 'Work in progress', 'Resolved'];
+
+let currentDoor = 1, selectedDoor = 1, selectedCategory = 'water-leak', demoTarget = 1;
+let issues = [], alerts = [], nextId = 1;
+const timers = {};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const timeNow = () => new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+
+/* ---------- Static builders ---------- */
+function buildStatic() {
+    const nums = [1,2,3,4,5,6,7];
+    $('loginDoors').innerHTML = nums.map(n => `<button class="door-btn ${n===1?'selected':''}" data-door="${n}">${n}</button>`).join('');
+    $('demoTargets').innerHTML = nums.map(n => `<button class="target-door ${n===1?'selected':''}" data-target="${n}">${n}</button>`).join('');
+    $('categoryGrid').innerHTML = Object.entries(TYPES).map(([k,t]) =>
+        `<div class="category-btn ${k===selectedCategory?'selected':''}" data-category="${k}"><div class="category-icon">${t.icon}</div><div class="category-name">${t.name}</div></div>`).join('');
+    $('legend').innerHTML = Object.entries(TYPES).map(([k,t]) =>
+        `<div class="legend-item"><span class="legend-dot ${t.dot}"></span>${t.name}<strong id="lg-${k}" style="margin-left:.5rem">0</strong></div>`).join('');
+
+    document.querySelectorAll('.door-btn').forEach(b => b.onclick = () => {
+        document.querySelectorAll('.door-btn').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected'); selectedDoor = +b.dataset.door;
+    });
+    document.querySelectorAll('.target-door').forEach(b => b.onclick = () => {
+        document.querySelectorAll('.target-door').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected'); demoTarget = +b.dataset.target;
+    });
+    document.querySelectorAll('.category-btn').forEach(b => b.onclick = () => {
+        document.querySelectorAll('.category-btn').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected'); selectedCategory = b.dataset.category;
+    });
+    document.querySelectorAll('.nav-link').forEach(l => l.onclick = e => { e.preventDefault(); goTo(l.dataset.section); });
+    document.querySelectorAll('.trigger-card').forEach(c => c.onclick = () => simulate(c.dataset.source));
+    $('passwordInput').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
+    document.querySelectorAll('.door-item').forEach(() => {});
+}
+
+function goTo(section) {
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.section === section));
+    document.querySelectorAll('.content-section').forEach(s => s.classList.toggle('active', s.id === section));
+    document.querySelector('.sidebar').classList.remove('mobile-open');
+    if (section === 'alerts') { alerts.forEach(a => { if (a.door === currentDoor) a.read = true; }); renderAlerts(); renderBadges(); }
+}
+
+/* ---------- Navigation ---------- */
+function showLanding() { $('landingPage').style.display = 'flex'; $('loginPage').style.display = 'none'; $('dashboard').classList.remove('active'); renderDoorGrid(); }
+function showLogin()   { $('landingPage').style.display = 'none'; $('loginPage').style.display = 'flex'; $('dashboard').classList.remove('active'); }
+function showDashboard() { $('landingPage').style.display = 'none'; $('loginPage').style.display = 'none'; $('dashboard').classList.add('active'); }
+function logout() { $('passwordInput').value = ''; showLanding(); }
+
+function login() {
+    if ($('passwordInput').value === `door${selectedDoor}`) {
+        currentDoor = selectedDoor; demoTarget = currentDoor;
+        document.querySelectorAll('.target-door').forEach(x => x.classList.toggle('selected', +x.dataset.target === demoTarget));
+        ['currentDoor','overviewDoor','sensorDoor','mailboxDoor','trackingDoor'].forEach(id => $(id).textContent = currentDoor);
+        $('ownerName').textContent = OWNERS[currentDoor];
+        $('passwordInput').value = '';
+        showDashboard(); goTo('overview'); renderAll();
+    } else {
+        toast('❌ Incorrect password. Hint: door' + selectedDoor);
+    }
+}
+
+/* ---------- Issue workflow ---------- */
+function addIssue(door, type, source, desc) {
+    const issue = { id: nextId++, door, type, source, desc, status: 'pending', step: -1, time: timeNow() };
+    issues.push(issue);
+    pushAlert(door, `${TYPES[type].icon} New ${source === 'sensor' ? 'sensor-detected' : 'mailbox'} issue: ${TYPES[type].name} at Door ${door}. Awaiting approval.`);
+    renderAll();
+    return issue;
+}
+
+function decide(id, accept) {
+    const i = issues.find(x => x.id === id); if (!i) return;
+    if (!accept) {
+        i.status = 'rejected';
+        pushAlert(i.door, `🚫 Request #${i.id} (${TYPES[i.type].name}) was rejected.`);
+        renderAll(); return;
+    }
+    i.status = 'progress'; i.step = 0;
+    pushAlert(i.door, `✅ Request #${i.id} approved. Maintenance has been scheduled.`);
+    renderAll();
+    timers[id] = setInterval(() => {
+        i.step++;
+        if (i.step >= STEPS.length - 1) {
+            i.step = STEPS.length - 1; i.status = 'resolved';
+            clearInterval(timers[id]);
+            pushAlert(i.door, `🎉 Issue #${i.id} (${TYPES[i.type].name}) has been resolved.`);
+        } else {
+            pushAlert(i.door, `🔧 Issue #${i.id}: ${STEPS[i.step]}.`);
+        }
+        renderAll();
+    }, 3000);
+}
+
+function pushAlert(door, text) {
+    alerts.unshift({ door, text, time: timeNow(), read: false });
+    if (door === currentDoor && $('dashboard').classList.contains('active')) toast(text);
+}
+
+function simulate(source) {
+    const type = source === 'sensor'
+        ? Object.keys(TYPES)[Math.floor(Math.random() * 4)]
+        : Object.keys(TYPES)[Math.floor(Math.random() * 4)];
+    const desc = source === 'sensor' ? 'Auto-detected by IoT sensor.' : 'Resident complaint (simulated).';
+    addIssue(demoTarget, type, source, desc);
+    toast(`🎮 ${source === 'sensor' ? 'Sensor' : 'Mailbox'} event simulated for Door ${demoTarget}.`);
+}
+
+function submitComplaint() {
+    const desc = $('issueDescription').value.trim();
+    if (!desc) { toast('⚠️ Please enter a description.'); return; }
+    addIssue(currentDoor, selectedCategory, 'mailbox', desc);
+    $('issueDescription').value = '';
+    toast('✅ Complaint submitted. Check the Approvals tab.');
+}
+
+function resetDemo() {
+    Object.values(timers).forEach(clearInterval);
+    issues = []; alerts = []; nextId = 1;
+    renderAll(); toast('Demo data cleared.');
+}
+
+/* ---------- Rendering ---------- */
+const mine = () => issues.filter(i => i.door === currentDoor);
+const pillFor = s => `<span class="pill ${s}">${s}</span>`;
+const issueRow = (i, extra = '') => `
+    <div class="issue-item ${i.source}">
+        <div class="issue-icon">${TYPES[i.type].icon}</div>
+        <div class="issue-body">
+            <div class="issue-title">#${i.id} ${TYPES[i.type].name}${pillFor(i.status)}</div>
+            <div class="issue-meta">${i.source === 'sensor' ? '📡 Sensor' : '📧 Mailbox'} • ${i.time} • ${esc(i.desc)}</div>
+        </div>
+        ${extra}
+    </div>`;
+
+function renderAll() {
+    renderDoorGrid(); renderOverview(); renderSensors(); renderApprovals();
+    renderTracking(); renderAlerts(); renderAnalytics(); renderBadges();
+}
+
+function renderDoorGrid() {
+    $('doorGrid').innerHTML = [1,2,3,4,5,6,7].map(n => {
+        const open = issues.some(i => i.door === n && (i.status === 'pending' || i.status === 'progress'));
+        return `<div class="door-item ${open ? 'warn' : ''}"><div class="door-icon">${n}<div class="status-indicator"></div></div><div class="door-label">DOOR ${n}</div><div class="door-status">${open ? 'ATTENTION' : 'HEALTHY'}</div></div>`;
+    }).join('');
+}
+
+function renderOverview() {
+    const m = mine(), open = m.filter(i => i.status === 'pending' || i.status === 'progress').length;
+    $('ovTotal').textContent = m.length;
+    $('ovActive').textContent = m.filter(i => i.status === 'progress').length;
+    $('ovPending').textContent = m.filter(i => i.status === 'pending').length;
+    $('ovResolved').textContent = m.filter(i => i.status === 'resolved').length;
+    const label = open ? 'ATTENTION' : 'HEALTHY';
+    $('overviewStatus').textContent = label; $('sideStatusText').textContent = label;
+    $('sideStatus').classList.toggle('warn', !!open);
+    $('overviewList').innerHTML = m.length
+        ? `<div class="dashboard-card"><div class="card-header"><div class="card-title">RECENT ISSUES</div></div><div class="issue-list">${m.slice().reverse().map(i => issueRow(i)).join('')}</div></div>`
+        : `<div class="empty-state"><div class="empty-icon">🏠</div><h3>All systems operational</h3><p>No maintenance issues detected. Use the Demo tab to simulate one.</p></div>`;
+}
+
+function renderSensors() {
+    const active = mine().filter(i => i.source === 'sensor' && (i.status === 'pending' || i.status === 'progress'));
+    $('sensorGrid').innerHTML = Object.entries(TYPES).map(([k,t]) => {
+        const hit = active.some(i => i.type === k);
+        return `<div class="sensor-card ${hit ? 'alert' : ''}"><div class="sensor-icon-large">${t.icon}</div><div class="sensor-name">${t.name}</div><div class="sensor-status">${hit ? 'TRIGGERED' : 'NORMAL'}</div></div>`;
+    }).join('');
+    $('sensorMsg').innerHTML = active.length ? '' : `<div class="empty-state"><div class="empty-icon">✅</div><h3>No sensor-detected issues. All sensors operating normally.</h3></div>`;
+}
+
+function renderApprovals() {
+    const p = mine().filter(i => i.status === 'pending');
+    $('approvalList').innerHTML = p.length
+        ? `<div class="issue-list">${p.map(i => issueRow(i, `<div class="issue-actions"><button class="btn accept" onclick="decide(${i.id}, true)">Accept</button><button class="btn reject" onclick="decide(${i.id}, false)">Reject</button></div>`)).join('')}</div>`
+        : `<div class="empty-state"><div class="empty-icon">✅</div><h3>No pending approvals</h3></div>`;
+}
+
+function renderTracking() {
+    const t = mine().filter(i => i.status === 'progress' || i.status === 'resolved');
+    $('trackingList').innerHTML = t.length
+        ? `<div class="issue-list">${t.map(i => `
+            <div class="dashboard-card" style="margin:0">
+                <div class="issue-title">${TYPES[i.type].icon} #${i.id} ${TYPES[i.type].name}${pillFor(i.status)}</div>
+                <div class="timeline">${STEPS.map((s, n) => `<div class="tl-step ${n < i.step || i.status === 'resolved' ? 'done' : ''} ${n === i.step && i.status !== 'resolved' ? 'current' : ''}"><div class="tl-dot"></div>${s}</div>`).join('')}</div>
+            </div>`).join('')}</div>`
+        : `<div class="empty-state"><div class="empty-icon">📋</div><h3>No active maintenance processes</h3></div>`;
+}
+
+function renderAlerts() {
+    const a = alerts.filter(x => x.door === currentDoor);
+    $('unreadCount').textContent = a.filter(x => !x.read).length;
+    $('alertList').innerHTML = a.length
+        ? a.map(x => `<div class="alert-item ${x.read ? '' : 'unread'}"><div><div>${esc(x.text)}</div><div class="alert-time">${x.time}</div></div></div>`).join('')
+        : `<div class="empty-state"><div class="empty-icon">🔔</div><h3>No notifications yet</h3></div>`;
+}
+
+function renderBadges() {
+    const pend = mine().filter(i => i.status === 'pending').length;
+    const unread = alerts.filter(a => a.door === currentDoor && !a.read).length;
+    [['approvalBadge', pend], ['alertBadge', unread]].forEach(([id, n]) => { $(id).textContent = n; $(id).classList.toggle('show', n > 0); });
+    $('unreadCount').textContent = unread;
+}
+
+function renderAnalytics() {
+    $('anResolved').textContent = issues.filter(i => i.status === 'resolved').length;
+    $('anProgress').textContent = issues.filter(i => i.status === 'progress').length;
+    $('anPending').textContent = issues.filter(i => i.status === 'pending').length;
+
+    const counts = [1,2,3,4,5,6,7].map(n => issues.filter(i => i.door === n).length);
+    const max = Math.max(1, ...counts);
+    $('barChart').innerHTML = counts.map((c, n) => `<div class="bar-col"><span>${c}</span><div class="bar" style="height:${(c / max) * 80}%"></div><span>D${n + 1}</span></div>`).join('');
+
+    const total = issues.length; let acc = 0, stops = [];
+    Object.entries(TYPES).forEach(([k, t]) => {
+        const c = issues.filter(i => i.type === k).length;
+        $('lg-' + k).textContent = c;
+        if (c) { const pct = (c / total) * 100; stops.push(`${t.color} ${acc}% ${acc + pct}%`); acc += pct; }
+    });
+    $('donut').style.background = total ? `conic-gradient(${stops.join(', ')})` : 'var(--border-color)';
+}
+
+/* ---------- Toasts ---------- */
+function toast(msg) {
+    const el = document.createElement('div');
+    el.className = 'toast'; el.textContent = msg;
+    $('toasts').appendChild(el);
+    setTimeout(() => el.remove(), 3500);
+}
+
+buildStatic();
+renderAll();
+</script>
+</body>
+</html>
